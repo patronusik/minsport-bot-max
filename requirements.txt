@@ -1,0 +1,4 @@
+umaxbot
+python-dotenv
+aiohttp
+certifi
