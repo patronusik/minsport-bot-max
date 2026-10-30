@@ -14,7 +14,7 @@ main_menu_kb = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🏅 Спортсменам", callback_data="athletes")],
     [InlineKeyboardButton(text="🏃 Комплекс ГТО", callback_data="gto_menu")],
     [InlineKeyboardButton(text="💰 Налоговый вычет", callback_data="tax_menu")],
-    [InlineKeyboardButton(text="🧑‍🏫 Земский тренер", url="https://minsport.astrobl.ru/activity/zemskii-trener")],
+    [InlineKeyboardButton(text="🏆 Земский тренер", url="https://minsport.astrobl.ru/activity/zemskii-trener")],
     [InlineKeyboardButton(text="📋 Список федераций Астраханской области", url="https://minsport.astrobl.ru/docs/document-document-16g3-4e0a3-8i0a-8i5")],
     [InlineKeyboardButton(text="🤝 Федерациям, НКО и частным клубам", callback_data="federations")],
     [InlineKeyboardButton(text="📞 Контактная информация", callback_data="contacts")],
@@ -27,20 +27,20 @@ back_to_menu_kb = InlineKeyboardMarkup(inline_keyboard=[
 # --- РАЗДЕЛ 1: УЧРЕЖДЕНИЯ ---
 # ВНИМАНИЕ: замени URL-заглушки на реальные ссылки ботов учреждений
 institutions_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="ГКУ АО РЦСП", url="https://max.ru/ССЫЛКА_НА_БОТА")],
-    [InlineKeyboardButton(text="ГБУ ДО АО СШОР им. Кузнецова", url="https://max.ru/ССЫЛКА_НА_БОТА")],
-    [InlineKeyboardButton(text="ГБУ ДО АО СШОР им. Скокова", url="https://max.ru/ССЫЛКА_НА_БОТА")],
-    [InlineKeyboardButton(text="ГКУ ДО АО ОСШ", url="https://max.ru/ССЫЛКА_НА_БОТА")],
-    [InlineKeyboardButton(text="ГБУ АО СШОР 1", url="https://max.ru/ССЫЛКА_НА_БОТА")],
-    [InlineKeyboardButton(text="ГБУ ДО АО СШОР им. Тихомировой", url="https://max.ru/ССЫЛКА_НА_БОТА")],
-    [InlineKeyboardButton(text="ГКУ ДО АО СШОР им. Тихонова", url="https://max.ru/ССЫЛКА_НА_БОТА")],
-    [InlineKeyboardButton(text="ГКУ ДО АО СШОР им. Гладченко", url="https://max.ru/ССЫЛКА_НА_БОТА")],
+    [InlineKeyboardButton(text="ГКУ АО РЦСП", url="https://max.ru/rcspastroblbot")],
+    [InlineKeyboardButton(text="ГБУ ДО АО СШОР им. Кузнецова", url="https://max.ru/shorkuznecov_bot")],
+    [InlineKeyboardButton(text="ГБУ ДО АО СШОР им. Скокова", url="https://max.ru/skokovinfobot")],
+    [InlineKeyboardButton(text="ГКУ ДО АО ОСШ", url="https://max.ru/oblastnayasportshkola30_bot")],
+    [InlineKeyboardButton(text="ГБУ ДО АО СШОР 1", url="https://max.ru/shor1_30_bot")],
+    [InlineKeyboardButton(text="ГБУ ДО АО СШОР им. Тихомировой", url="https://max.ru/grace30_bot")],
+    [InlineKeyboardButton(text="ГКУ ДО АО СШОР им. Тихонова", url="https://max.ru/rowing30_bot")],
+    [InlineKeyboardButton(text="ГКУ ДО АО СШОР им. Гладченко", url="https://max.ru/shor_gladchenko_bot")],
     [InlineKeyboardButton(text="ГАУ ДО АО СШОР им. Гладилина", url="https://max.ru/ССЫЛКА_НА_БОТА")],
-    [InlineKeyboardButton(text="ГАУ АО РЦСА «Каспий»", callback_data="inst_kaspiy")],
+    [InlineKeyboardButton(text="ГАУ АО РЦСП «Каспий»", callback_data="inst_kaspiy")],
     [InlineKeyboardButton(text="ГАУ АО РЦСП «Волгарь»", callback_data="inst_volgar")],
     [InlineKeyboardButton(text="ГАУ АО РЦСП «Заря Каспия»", callback_data="inst_zarya")],
     [InlineKeyboardButton(text="ГАУ АО РЦСП «Звёздный»", callback_data="inst_zvezdny")],
-    [InlineKeyboardButton(text="ГАУ АО «ЦРСИ»", url="https://max.ru/ССЫЛКА_НА_БОТА")],
+    [InlineKeyboardButton(text="ГАУ АО «ЦРСИ»", url="https://max.ru/newpokolenie30_maxbot")],
     [InlineKeyboardButton(text="ГАУ АО «Центр зимних видов спорта»", callback_data="inst_winter")],
     [InlineKeyboardButton(text="🏠 На главную", callback_data="back_to_menu")],
 ])
@@ -122,7 +122,7 @@ federations_kb = InlineKeyboardMarkup(inline_keyboard=[
 
 # --- ПОДМЕНЮ УЧРЕЖДЕНИЙ (где два подраздела) ---
 inst_kaspiy_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Бот учреждения", url="https://max.ru/ССЫЛКА_НА_БОТА")],
+    [InlineKeyboardButton(text="Бот учреждения", url="https://max.ru/kaspiy30_bot")],
     [InlineKeyboardButton(text="Авангард", url="https://max.ru/ССЫЛКА_НА_АВАНГАРД")],
     [InlineKeyboardButton(text="⬅️ Назад", callback_data="institutions")],
     [InlineKeyboardButton(text="🏠 На главную", callback_data="back_to_menu")],
@@ -136,7 +136,7 @@ inst_volgar_kb = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 inst_zarya_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Бот ГАУ АО РЦСП «Заря Каспия» (платные услуги)", url="https://max.ru/ССЫЛКА_НА_БОТА")],
+    [InlineKeyboardButton(text="Бот ГАУ АО РЦСП «Заря Каспия» (платные услуги)", url="https://max.ru/zaryakaspiya_bot")],
     [InlineKeyboardButton(text="Команда «Динамо»", url="https://max.ru/ССЫЛКА_НА_ДИНАМО")],
     [InlineKeyboardButton(text="⬅️ Назад", callback_data="institutions")],
     [InlineKeyboardButton(text="🏠 На главную", callback_data="back_to_menu")],
@@ -150,6 +150,7 @@ inst_zvezdny_kb = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 inst_winter_kb = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Бот учреждения", url="https://max.ru/gau_ao_czvs_bot")],
     [InlineKeyboardButton(text="Бот «Миланкор»", url="https://max.ru/ССЫЛКА_НА_БОТА")],
     [InlineKeyboardButton(text="Бот «Ястребов»", url="https://max.ru/ССЫЛКА_НА_БОТА")],
     [InlineKeyboardButton(text="⬅️ Назад", callback_data="institutions")],
