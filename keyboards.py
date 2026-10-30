@@ -9,7 +9,7 @@ subscribe_kb = InlineKeyboardMarkup(inline_keyboard=[
 
 # --- ГЛАВНОЕ МЕНЮ ---
 main_menu_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="🏛 Государственные учреждения министерства", callback_data="institutions")],
+    [InlineKeyboardButton(text="🏛 Гос учреждения министерства", callback_data="institutions")],
     [InlineKeyboardButton(text="📅 Календарь профессиональных команд", callback_data="calendar")],
     [InlineKeyboardButton(text="🏅 Спортсменам", callback_data="athletes")],
     [InlineKeyboardButton(text="🏃 Комплекс ГТО", callback_data="gto_menu")],
