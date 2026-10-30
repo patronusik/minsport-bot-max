@@ -1,11 +1,11 @@
 import os
 
-CHANNEL_ID = -69234958625333  # ← ID сообщества Минспорта в MAX (замени на актуальный)
+CHANNEL_ID = -68773116114416  # ← ID сообщества Минспорта в MAX (замени на актуальный)
 MAX_BOT_TOKEN = os.getenv("MAX_BOT_TOKEN") or os.getenv("MAX_TOKEN") or os.getenv("BOT_TOKEN")
 BOT_TOKEN = os.getenv("MAX_BOT_TOKEN") or os.getenv("MAX_TOKEN") or os.getenv("BOT_TOKEN")
 
 # --- ССЫЛКИ ---
-CHANNEL_URL = "https://max.ru/id3015065824_gos"  # ← ссылка на сообщество Минспорта в MAX
+CHANNEL_URL = "https://max.ru/minsport30"  # ← ссылка на сообщество Минспорта в MAX
 SITE_URL = "https://minsport.astrobl.ru"
 
 # --- ТЕКСТЫ ---
