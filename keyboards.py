@@ -35,7 +35,7 @@ institutions_kb = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="ГБУ ДО АО СШОР им. Тихомировой", url="https://max.ru/grace30_bot")],
     [InlineKeyboardButton(text="ГКУ ДО АО СШОР им. Тихонова", url="https://max.ru/rowing30_bot")],
     [InlineKeyboardButton(text="ГКУ ДО АО СШОР им. Гладченко", url="https://max.ru/shor_gladchenko_bot")],
-    [InlineKeyboardButton(text="ГАУ ДО АО СШОР им. Гладилина", url="https://max.ru/ССЫЛКА_НА_БОТА")],
+    [InlineKeyboardButton(text="ГАУ ДО АО СШОР им. Гладилина", url="https://max.ru/shorvodnoepolobot")],
     [InlineKeyboardButton(text="ГАУ АО РЦСП «Каспий»", callback_data="inst_kaspiy")],
     [InlineKeyboardButton(text="ГАУ АО РЦСП «Волгарь»", callback_data="inst_volgar")],
     [InlineKeyboardButton(text="ГАУ АО РЦСП «Заря Каспия»", callback_data="inst_zarya")],
