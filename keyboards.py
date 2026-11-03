@@ -136,7 +136,7 @@ inst_volgar_kb = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 inst_zarya_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Бот ГАУ АО РЦСП «Заря Каспия» (платные услуги)", url="https://max.ru/zaryakaspiya_bot")],
+    [InlineKeyboardButton(text="Бот ГАУ АО РЦСП «Заря Каспия» (платные услуги)", url="https://max.ru/zaryakaspiya30_bot")],
     [InlineKeyboardButton(text="Команда «Динамо»", url="https://max.ru/ССЫЛКА_НА_ДИНАМО")],
     [InlineKeyboardButton(text="⬅️ Назад", callback_data="institutions")],
     [InlineKeyboardButton(text="🏠 На главную", callback_data="back_to_menu")],
