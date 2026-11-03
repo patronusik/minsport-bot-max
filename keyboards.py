@@ -10,13 +10,13 @@ subscribe_kb = InlineKeyboardMarkup(inline_keyboard=[
 # --- ГЛАВНОЕ МЕНЮ ---
 main_menu_kb = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🏛 Гос учреждения министерства", callback_data="institutions")],
-    [InlineKeyboardButton(text="📅 Календарь профессиональных команд", callback_data="calendar")],
+    [InlineKeyboardButton(text="📅 Календарь проф команд", callback_data="calendar")],
     [InlineKeyboardButton(text="🏅 Спортсменам", callback_data="athletes")],
     [InlineKeyboardButton(text="🏃 Комплекс ГТО", callback_data="gto_menu")],
     [InlineKeyboardButton(text="💰 Налоговый вычет", callback_data="tax_menu")],
     [InlineKeyboardButton(text="🏆 Земский тренер", url="https://minsport.astrobl.ru/activity/zemskii-trener")],
-    [InlineKeyboardButton(text="📋 Список федераций Астраханской области", url="https://minsport.astrobl.ru/docs/document-document-16g3-4e0a3-8i0a-8i5")],
-    [InlineKeyboardButton(text="🤝 Федерациям, НКО и частным клубам", callback_data="federations")],
+    [InlineKeyboardButton(text="📋 Список федераций АО", url="https://minsport.astrobl.ru/docs/document-document-16g3-4e0a3-8i0a-8i5")],
+    [InlineKeyboardButton(text="🤝 Федерациям, НКО и ЧК", callback_data="federations")],
     [InlineKeyboardButton(text="📞 Контактная информация", callback_data="contacts")],
 ])
 
@@ -47,11 +47,11 @@ institutions_kb = InlineKeyboardMarkup(inline_keyboard=[
 
 # --- РАЗДЕЛ 2: КАЛЕНДАРЬ ---
 calendar_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="ГК «Астраханочка»", callback_data="cal_astrakhanochka")],
-    [InlineKeyboardButton(text="ФК «Волгарь»", callback_data="cal_volgar")],
-    [InlineKeyboardButton(text="ГК «Динамо»", callback_data="cal_dinamo")],
-    [InlineKeyboardButton(text="ВК «Динамо-СШОР»", callback_data="cal_dinamo_vk")],
-    [InlineKeyboardButton(text="СК «Астрахань»", callback_data="cal_astrakhan")],
+    [InlineKeyboardButton(text="🤾 ГК «Астраханочка»", callback_data="cal_astrakhanochka")],
+    [InlineKeyboardButton(text="⚽ ФК «Волгарь»", callback_data="cal_volgar")],
+    [InlineKeyboardButton(text="🤾 ГК «Динамо»", callback_data="cal_dinamo")],
+    [InlineKeyboardButton(text="🤽 ВК «Динамо-СШОР»", callback_data="cal_dinamo_vk")],
+    [InlineKeyboardButton(text="⚽ СК «Астрахань»", callback_data="cal_astrakhan")],
     [InlineKeyboardButton(text="🏠 На главную", callback_data="back_to_menu")],
 ])
 
