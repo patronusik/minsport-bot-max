@@ -37,13 +37,15 @@ def register(dp, bot):
 
         # --- ID СООБЩЕНИЯ ДЛЯ РЕДАКТИРОВАНИЯ ---
         message_id = None
-        if hasattr(cb, "message_id"):
-            message_id = cb.message_id
-        elif hasattr(cb, "message") and cb.message is not None:
+        # В umaxbot callback содержит поле message, у которого есть id (mid)
+        if hasattr(cb, "message") and cb.message is not None:
             if isinstance(cb.message, dict):
                 message_id = cb.message.get("mid") or cb.message.get("message_id")
             else:
                 message_id = getattr(cb.message, "mid", None) or getattr(cb.message, "message_id", None)
+        # Запасной вариант
+        if message_id is None and hasattr(cb, "message_id"):
+            message_id = cb.message_id
 
         print(f"CALLBACK: resolved user_id={user_id}, message_id={message_id}")
 
@@ -63,6 +65,7 @@ def register(dp, bot):
                     return
                 except Exception as e:
                     print(f"UPDATE FAILED: {e}. Fallback to send_message")
+            # Fallback — отправляем новое
             await bot.send_message(
                 user_id=user_id,
                 text=text,
