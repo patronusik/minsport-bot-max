@@ -35,20 +35,46 @@ def register(dp, bot):
         if user_id is None:
             user_id = getattr(cb, "user_id", None)
 
-        print(f"CALLBACK: resolved user_id={user_id}")
+        # --- ID СООБЩЕНИЯ ДЛЯ РЕДАКТИРОВАНИЯ ---
+        message_id = None
+        if hasattr(cb, "message_id"):
+            message_id = cb.message_id
+        elif hasattr(cb, "message") and cb.message is not None:
+            if isinstance(cb.message, dict):
+                message_id = cb.message.get("mid") or cb.message.get("message_id")
+            else:
+                message_id = getattr(cb.message, "mid", None) or getattr(cb.message, "message_id", None)
+
+        print(f"CALLBACK: resolved user_id={user_id}, message_id={message_id}")
 
         payload = cb.payload
+
+        # --- ХЕЛПЕР: отредактировать или отправить ---
+        async def show(text, keyboard):
+            if message_id:
+                try:
+                    await bot.update_message(
+                        message_id=message_id,
+                        text=text,
+                        reply_markup=keyboard,
+                        format="markdown"
+                    )
+                    print(f"EDITED message_id={message_id}")
+                    return
+                except Exception as e:
+                    print(f"UPDATE FAILED: {e}. Fallback to send_message")
+            await bot.send_message(
+                user_id=user_id,
+                text=text,
+                reply_markup=keyboard,
+                format="markdown"
+            )
 
         # --- ПОДПИСКА ---
         if payload == "check_sub":
             subscribed = await is_user_subscribed(user_id)
             if subscribed:
-                await bot.send_message(
-                    user_id=user_id,
-                    text=TEXT_WELCOME,
-                    reply_markup=main_menu_kb,
-                    format="markdown"
-                )
+                await show(TEXT_WELCOME, main_menu_kb)
             else:
                 await bot.send_message(
                     user_id=user_id,
@@ -57,13 +83,12 @@ def register(dp, bot):
                 )
             return
 
-        # --- НА ГЛАВНУЮ (без проверки подписки, чтобы всегда можно было вернуться) ---
+        # --- НА ГЛАВНУЮ (без проверки подписки) ---
         if payload == "back_to_menu":
-            await bot.send_message(user_id=user_id, text=TEXT_WELCOME,
-                                   reply_markup=main_menu_kb, format="markdown")
+            await show(TEXT_WELCOME, main_menu_kb)
             return
 
-        # --- ДЛЯ ВСЕХ ОСТАЛЬНЫХ ДЕЙСТВИЙ — ПРОВЕРКА ПОДПИСКИ ---
+        # --- ДЛЯ ВСЕХ ОСТАЛЬНЫХ — ПРОВЕРКА ПОДПИСКИ ---
         subscribed = await is_user_subscribed(user_id)
         if not subscribed:
             await bot.send_message(
@@ -75,105 +100,76 @@ def register(dp, bot):
 
         # --- РАЗДЕЛ 1: УЧРЕЖДЕНИЯ ---
         if payload == "institutions":
-            await bot.send_message(user_id=user_id, text=TEXT_INSTITUTIONS,
-                                   reply_markup=institutions_kb, format="markdown")
+            await show(TEXT_INSTITUTIONS, institutions_kb)
 
         elif payload == "inst_kaspiy":
-            await bot.send_message(user_id=user_id,
-                                   text="🏛 ГАУ АО РЦСА «Каспий»\n\nВыберите подраздел:",
-                                   reply_markup=inst_kaspiy_kb, format="markdown")
+            await show("🏛 ГАУ АО РЦСА «Каспий»\n\nВыберите подраздел:", inst_kaspiy_kb)
 
         elif payload == "inst_volgar":
-            await bot.send_message(user_id=user_id,
-                                   text="🏛 ГАУ АО РЦСП «Волгарь»\n\nВыберите подраздел:",
-                                   reply_markup=inst_volgar_kb, format="markdown")
+            await show("🏛 ГАУ АО РЦСП «Волгарь»\n\nВыберите подраздел:", inst_volgar_kb)
 
         elif payload == "inst_zarya":
-            await bot.send_message(user_id=user_id,
-                                   text="🏛 ГАУ АО РЦСП «Заря Каспия»\n\nВыберите подраздел:",
-                                   reply_markup=inst_zarya_kb, format="markdown")
+            await show("🏛 ГАУ АО РЦСП «Заря Каспия»\n\nВыберите подраздел:", inst_zarya_kb)
 
         elif payload == "inst_zvezdny":
-            await bot.send_message(user_id=user_id,
-                                   text="🏛 ГАУ АО РЦСП «Звёздный»\n\nВыберите подраздел:",
-                                   reply_markup=inst_zvezdny_kb, format="markdown")
+            await show("🏛 ГАУ АО РЦСП «Звёздный»\n\nВыберите подраздел:", inst_zvezdny_kb)
 
         elif payload == "inst_winter":
-            await bot.send_message(user_id=user_id,
-                                   text="🏛 ГАУ АО «Центр зимних видов спорта»\n\nВыберите подраздел:",
-                                   reply_markup=inst_winter_kb, format="markdown")
+            await show("🏛 ГАУ АО «Центр зимних видов спорта»\n\nВыберите подраздел:", inst_winter_kb)
 
         # --- РАЗДЕЛ 2: КАЛЕНДАРЬ ---
         elif payload == "calendar":
-            await bot.send_message(user_id=user_id, text=TEXT_CALENDAR,
-                                   reply_markup=calendar_kb, format="markdown")
+            await show(TEXT_CALENDAR, calendar_kb)
 
         elif payload == "cal_astrakhanochka":
-            await bot.send_message(user_id=user_id, text=TEXT_CAL_ASTRAKHANOCHKA,
-                                   reply_markup=back_to_calendar_kb, format="markdown")
+            await show(TEXT_CAL_ASTRAKHANOCHKA, back_to_calendar_kb)
 
         elif payload == "cal_volgar":
-            await bot.send_message(user_id=user_id, text=TEXT_CAL_VOLGAR,
-                                   reply_markup=back_to_calendar_kb, format="markdown")
+            await show(TEXT_CAL_VOLGAR, back_to_calendar_kb)
 
         elif payload == "cal_dinamo":
-            await bot.send_message(user_id=user_id, text=TEXT_CAL_DINAMO,
-                                   reply_markup=back_to_calendar_kb, format="markdown")
+            await show(TEXT_CAL_DINAMO, back_to_calendar_kb)
 
         elif payload == "cal_dinamo_vk":
-            await bot.send_message(user_id=user_id, text=TEXT_CAL_DINAMO_VK,
-                                   reply_markup=back_to_calendar_kb, format="markdown")
+            await show(TEXT_CAL_DINAMO_VK, back_to_calendar_kb)
 
         elif payload == "cal_astrakhan":
-            await bot.send_message(user_id=user_id, text=TEXT_CAL_ASTRAKHAN,
-                                   reply_markup=back_to_calendar_kb, format="markdown")
+            await show(TEXT_CAL_ASTRAKHAN, back_to_calendar_kb)
 
         # --- РАЗДЕЛ 3: СПОРТСМЕНАМ ---
         elif payload == "athletes":
-            await bot.send_message(user_id=user_id, text=TEXT_ATHLETES,
-                                   reply_markup=athletes_kb, format="markdown")
+            await show(TEXT_ATHLETES, athletes_kb)
 
         elif payload == "ranks":
-            await bot.send_message(user_id=user_id,
-                                   text="🏅 **Присвоение спортивных разрядов и званий**\n\nВыберите подраздел:",
-                                   reply_markup=ranks_kb, format="markdown")
+            await show("🏅 **Присвоение спортивных разрядов и званий**\n\nВыберите подраздел:", ranks_kb)
 
         elif payload == "ranks_who":
-            await bot.send_message(user_id=user_id, text=TEXT_RANKS_WHO,
-                                   reply_markup=back_to_ranks_kb, format="markdown")
+            await show(TEXT_RANKS_WHO, back_to_ranks_kb)
 
         # --- РАЗДЕЛ 4: ГТО ---
         elif payload == "gto_menu":
-            await bot.send_message(user_id=user_id, text=TEXT_GTO_MENU,
-                                   reply_markup=gto_kb, format="markdown")
+            await show(TEXT_GTO_MENU, gto_kb)
 
         elif payload == "gto_how":
-            await bot.send_message(user_id=user_id, text=TEXT_GTO_HOW,
-                                   reply_markup=back_to_gto_kb, format="markdown")
+            await show(TEXT_GTO_HOW, back_to_gto_kb)
 
         elif payload == "gto_centers":
-            await bot.send_message(user_id=user_id, text=TEXT_GTO_CENTERS,
-                                   reply_markup=back_to_gto_kb, format="markdown")
+            await show(TEXT_GTO_CENTERS, back_to_gto_kb)
 
         # --- РАЗДЕЛ 5: НАЛОГОВЫЙ ВЫЧЕТ ---
         elif payload == "tax_menu":
-            await bot.send_message(user_id=user_id, text=TEXT_TAX_MENU,
-                                   reply_markup=tax_kb, format="markdown")
+            await show(TEXT_TAX_MENU, tax_kb)
 
         elif payload == "tax_sport":
-            await bot.send_message(user_id=user_id, text=TEXT_TAX_SPORT,
-                                   reply_markup=tax_sport_kb, format="markdown")
+            await show(TEXT_TAX_SPORT, tax_sport_kb)
 
         # --- РАЗДЕЛ 8: ФЕДЕРАЦИЯМ ---
         elif payload == "federations":
-            await bot.send_message(user_id=user_id,
-                                   text="🤝 **Федерациям, НКО и частным клубам**\n\nВыберите раздел:",
-                                   reply_markup=federations_kb, format="markdown")
+            await show("🤝 **Федерациям, НКО и частным клубам**\n\nВыберите раздел:", federations_kb)
 
         # --- РАЗДЕЛ 9: КОНТАКТЫ ---
         elif payload == "contacts":
-            await bot.send_message(user_id=user_id, text=TEXT_CONTACTS,
-                                   reply_markup=back_to_menu_kb, format="markdown")
+            await show(TEXT_CONTACTS, back_to_menu_kb)
 
         else:
             print(f"UNHANDLED PAYLOAD: {payload}")
