@@ -25,6 +25,12 @@ def register(dp, bot):
 
     @dp.callback()
     async def on_callback(cb):
+        # --- СНАЧАЛА ОТВЕЧАЕМ НА CALLBACK (обязательно для MAX) ---
+        try:
+            await bot.answer_callback(callback_id=cb.id, notification="")
+        except Exception as e:
+            print(f"ANSWER_CALLBACK FAILED: {e}")
+
         print(f"CALLBACK: payload={cb.payload}")
 
         user_id = None
@@ -35,18 +41,20 @@ def register(dp, bot):
         if user_id is None:
             user_id = getattr(cb, "user_id", None)
 
-        # --- ID СООБЩЕНИЯ ДЛЯ РЕДАКТИРОВАНИЯ ---
-        # В umaxbot callback содержит объект message, у которого есть mid
+        # --- БЕЗОПАСНОЕ ИЗВЛЕЧЕНИЕ ID СООБЩЕНИЯ ---
         message_id = None
-        if hasattr(cb, "message") and cb.message is not None:
-            m = cb.message
-            if isinstance(m, dict):
-                message_id = m.get("mid") or m.get("id")
-            else:
-                message_id = getattr(m, "mid", None) or getattr(m, "id", None)
-        # Запасной вариант
-        if message_id is None and hasattr(cb, "message_id"):
-            message_id = cb.message_id
+        try:
+            if hasattr(cb, "message") and cb.message is not None:
+                m = cb.message
+                if isinstance(m, dict):
+                    message_id = m.get("mid") or m.get("id")
+                else:
+                    message_id = getattr(m, "mid", None) or getattr(m, "id", None)
+            if message_id is None and hasattr(cb, "message_id"):
+                message_id = cb.message_id
+        except Exception as e:
+            print(f"MESSAGE_ID EXTRACT FAILED: {e}")
+            message_id = None
 
         print(f"CALLBACK: user_id={user_id}, message_id={message_id}")
 
