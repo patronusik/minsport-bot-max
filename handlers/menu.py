@@ -26,14 +26,13 @@ from keyboards import (
 )
 from handlers.start import is_user_subscribed
 
-# --- ЛОГГЕР ---
+# --- НАСТРОЙКА ЛОГГЕРА ---
 logger = logging.getLogger("menu")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 if not logger.handlers:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(logging.Formatter("%(asctime)s [MENU] %(message)s"))
     logger.addHandler(handler)
-
 
 def log(msg):
     print(msg, flush=True)
@@ -67,10 +66,18 @@ async def _edit_message_http(message_id, text, keyboard):
     if att:
         body["attachments"] = att
 
-    # Используем системное хранилище сертификатов (Dockerfile добавит туда сертификаты Минцифры)
-    ssl_context = ssl.create_default_context()
+    # Пробуем системный контекст (сертификаты Минцифры должны быть в Dockerfile)
+    try:
+        ssl_context = ssl.create_default_context()
+        log("SSL context created (system default)")
+    except Exception as e:
+        log(f"SSL context creation FAILED: {e}")
+        ssl_context = None
 
-    log(f"EDIT REQ: url={url}, body_keys={list(body.keys())}")
+    log(f"EDIT REQ: url={url}")
+    log(f"EDIT REQ headers: {list(headers.keys())}")
+    log(f"EDIT REQ body: {str(body)[:500]}")
+
     try:
         async with aiohttp.ClientSession() as session:
             async with session.put(url, headers=headers, json=body, ssl=ssl_context) as resp:
@@ -78,7 +85,7 @@ async def _edit_message_http(message_id, text, keyboard):
                 log(f"EDIT RESP: status={resp.status}, body={txt[:500]}")
                 return resp.status == 200
     except Exception as e:
-        log(f"EDIT EXCEPTION: {e}")
+        log(f"EDIT EXCEPTION: {type(e).__name__}: {e}")
         return False
 
 
@@ -86,25 +93,25 @@ def register(dp, bot):
 
     @dp.callback()
     async def on_callback(cb):
-        log("=" * 60)
-        log("RAW CALLBACK RECEIVED")
+        log("=" * 70)
+        log("CALLBACK HANDLER STARTED")
 
-        # --- ANSWER_CALLBACK ---
+        # --- 1. ANSWER CALLBACK ---
         callback_id = getattr(cb, "callback_id", None)
         if callback_id is None and hasattr(cb, "data") and isinstance(cb.data, dict):
             callback_id = cb.data.get("callback_id")
-        log(f"RESOLVED callback_id = {callback_id}")
+        log(f"1. callback_id = {callback_id}")
 
         if callback_id:
             try:
                 await bot.answer_callback(callback_id=callback_id, notification="")
-                log("ANSWER_CALLBACK OK")
+                log("1. ANSWER_CALLBACK OK")
             except Exception as e:
-                log(f"ANSWER_CALLBACK FAILED: {e}")
+                log(f"1. ANSWER_CALLBACK FAILED: {e}")
         else:
-            log("ANSWER_CALLBACK SKIPPED: callback_id not found")
+            log("1. ANSWER_CALLBACK SKIPPED: callback_id not found")
 
-        # --- USER_ID ---
+        # --- 2. USER ID ---
         user_id = None
         if hasattr(cb, "user") and cb.user is not None:
             user_id = getattr(cb.user, "id", None) or (
@@ -112,9 +119,9 @@ def register(dp, bot):
             )
         if user_id is None:
             user_id = getattr(cb, "user_id", None)
-        log(f"RESOLVED user_id = {user_id}")
+        log(f"2. user_id = {user_id}")
 
-        # --- MESSAGE_ID ---
+        # --- 3. MESSAGE ID ---
         message_id = None
         if hasattr(cb, "message") and cb.message is not None:
             m = cb.message
@@ -124,113 +131,102 @@ def register(dp, bot):
                 message_id = getattr(m, "mid", None) or getattr(m, "id", None)
         if message_id is None and hasattr(cb, "message_id"):
             message_id = cb.message_id
-        log(f"RESOLVED message_id = {message_id}")
+        log(f"3. message_id = {message_id}")
 
         payload = cb.payload
-        log(f"PAYLOAD = {payload}")
-        log("=" * 60)
+        log(f"4. payload = {payload}")
 
-        async def show(text, keyboard):
-            log(f"SHOW CALLED: message_id={message_id}")
-            if message_id:
-                ok = await _edit_message_http(message_id, text, keyboard)
-                if ok:
-                    log("SHOW: edit success")
-                    return
-                log("SHOW: edit failed, fallback to send")
-            log("SHOW: sending new message")
+        # --- 5. ПРОВЕРКА ПОДПИСКИ ---
+        subscribed = await is_user_subscribed(user_id)
+        log(f"5. subscribed = {subscribed}")
+        if not subscribed and payload not in ("check_sub", "back_to_menu"):
+            await bot.send_message(
+                user_id=user_id,
+                text=TEXT_NOT_SUBSCRIBED,
+                reply_markup=subscribe_kb
+            )
+            log("5. SENT NOT_SUBSCRIBED message")
+            return
+
+        # --- 6. ВЫБОР ТЕКСТА И КЛАВИАТУРЫ ---
+        text = None
+        keyboard = None
+
+        if payload == "check_sub":
+            text = TEXT_WELCOME
+            keyboard = main_menu_kb
+        elif payload == "back_to_menu":
+            text = TEXT_WELCOME
+            keyboard = main_menu_kb
+        elif payload == "institutions":
+            text, keyboard = TEXT_INSTITUTIONS, institutions_kb
+        elif payload == "inst_kaspiy":
+            text, keyboard = "🏛 ГАУ АО РЦСА «Каспий»\n\nВыберите подраздел:", inst_kaspiy_kb
+        elif payload == "inst_volgar":
+            text, keyboard = "🏛 ГАУ АО РЦСП «Волгарь»\n\nВыберите подраздел:", inst_volgar_kb
+        elif payload == "inst_zarya":
+            text, keyboard = "🏛 ГАУ АО РЦСП «Заря Каспия»\n\nВыберите подраздел:", inst_zarya_kb
+        elif payload == "inst_zvezdny":
+            text, keyboard = "🏛 ГАУ АО РЦСП «Звёздный»\n\nВыберите подраздел:", inst_zvezdny_kb
+        elif payload == "inst_winter":
+            text, keyboard = "🏛 ГАУ АО «Центр зимних видов спорта»\n\nВыберите подраздел:", inst_winter_kb
+        elif payload == "calendar":
+            text, keyboard = TEXT_CALENDAR, calendar_kb
+        elif payload == "cal_astrakhanochka":
+            text, keyboard = TEXT_CAL_ASTRAKHANOCHKA, back_to_calendar_kb
+        elif payload == "cal_volgar":
+            text, keyboard = TEXT_CAL_VOLGAR, back_to_calendar_kb
+        elif payload == "cal_dinamo":
+            text, keyboard = TEXT_CAL_DINAMO, back_to_calendar_kb
+        elif payload == "cal_dinamo_vk":
+            text, keyboard = TEXT_CAL_DINAMO_VK, back_to_calendar_kb
+        elif payload == "cal_astrakhan":
+            text, keyboard = TEXT_CAL_ASTRAKHAN, back_to_calendar_kb
+        elif payload == "athletes":
+            text, keyboard = TEXT_ATHLETES, athletes_kb
+        elif payload == "ranks":
+            text, keyboard = "🏅 **Присвоение спортивных разрядов и званий**\n\nВыберите подраздел:", ranks_kb
+        elif payload == "ranks_who":
+            text, keyboard = TEXT_RANKS_WHO, back_to_ranks_kb
+        elif payload == "gto_menu":
+            text, keyboard = TEXT_GTO_MENU, gto_kb
+        elif payload == "gto_how":
+            text, keyboard = TEXT_GTO_HOW, back_to_gto_kb
+        elif payload == "gto_centers":
+            text, keyboard = TEXT_GTO_CENTERS, back_to_gto_kb
+        elif payload == "tax_menu":
+            text, keyboard = TEXT_TAX_MENU, tax_kb
+        elif payload == "tax_sport":
+            text, keyboard = TEXT_TAX_SPORT, tax_sport_kb
+        elif payload == "federations":
+            text, keyboard = "🤝 **Федерациям, НКО и частным клубам**\n\nВыберите раздел:", federations_kb
+        elif payload == "contacts":
+            text, keyboard = TEXT_CONTACTS, back_to_menu_kb
+        else:
+            log(f"6. UNHANDLED PAYLOAD: {payload}")
+            return
+
+        log(f"6. text length = {len(text) if text else 0}")
+        log(f"6. keyboard = {keyboard is not None}")
+
+        # --- 7. РЕДАКТИРОВАНИЕ ИЛИ ОТПРАВКА ---
+        if message_id:
+            log("7. Trying to EDIT message via HTTP...")
+            ok = await _edit_message_http(message_id, text, keyboard)
+            if ok:
+                log("7. EDIT SUCCESS")
+                return
+            log("7. EDIT FAILED, fallback to send_message")
+        else:
+            log("7. No message_id, sending new message")
+
+        try:
             await bot.send_message(
                 user_id=user_id,
                 text=text,
                 reply_markup=keyboard,
                 format="markdown"
             )
-
-        # --- ПОДПИСКА ---
-        if payload == "check_sub":
-            subscribed = await is_user_subscribed(user_id)
-            log(f"SUBSCRIBED = {subscribed}")
-            if subscribed:
-                await show(TEXT_WELCOME, main_menu_kb)
-            else:
-                await bot.send_message(
-                    user_id=user_id,
-                    text=TEXT_NOT_SUBSCRIBED,
-                    reply_markup=subscribe_kb
-                )
-            return
-
-        if payload == "back_to_menu":
-            await show(TEXT_WELCOME, main_menu_kb)
-            return
-
-        subscribed = await is_user_subscribed(user_id)
-        log(f"SUBSCRIBED = {subscribed}")
-        if not subscribed:
-            await bot.send_message(
-                user_id=user_id,
-                text=TEXT_NOT_SUBSCRIBED,
-                reply_markup=subscribe_kb
-            )
-            return
-
-        # --- РАЗДЕЛ 1: УЧРЕЖДЕНИЯ ---
-        if payload == "institutions":
-            await show(TEXT_INSTITUTIONS, institutions_kb)
-        elif payload == "inst_kaspiy":
-            await show("🏛 ГАУ АО РЦСА «Каспий»\n\nВыберите подраздел:", inst_kaspiy_kb)
-        elif payload == "inst_volgar":
-            await show("🏛 ГАУ АО РЦСП «Волгарь»\n\nВыберите подраздел:", inst_volgar_kb)
-        elif payload == "inst_zarya":
-            await show("🏛 ГАУ АО РЦСП «Заря Каспия»\n\nВыберите подраздел:", inst_zarya_kb)
-        elif payload == "inst_zvezdny":
-            await show("🏛 ГАУ АО РЦСП «Звёздный»\n\nВыберите подраздел:", inst_zvezdny_kb)
-        elif payload == "inst_winter":
-            await show("🏛 ГАУ АО «Центр зимних видов спорта»\n\nВыберите подраздел:", inst_winter_kb)
-
-        # --- РАЗДЕЛ 2: КАЛЕНДАРЬ ---
-        elif payload == "calendar":
-            await show(TEXT_CALENDAR, calendar_kb)
-        elif payload == "cal_astrakhanochka":
-            await show(TEXT_CAL_ASTRAKHANOCHKA, back_to_calendar_kb)
-        elif payload == "cal_volgar":
-            await show(TEXT_CAL_VOLGAR, back_to_calendar_kb)
-        elif payload == "cal_dinamo":
-            await show(TEXT_CAL_DINAMO, back_to_calendar_kb)
-        elif payload == "cal_dinamo_vk":
-            await show(TEXT_CAL_DINAMO_VK, back_to_calendar_kb)
-        elif payload == "cal_astrakhan":
-            await show(TEXT_CAL_ASTRAKHAN, back_to_calendar_kb)
-
-        # --- РАЗДЕЛ 3: СПОРТСМЕНАМ ---
-        elif payload == "athletes":
-            await show(TEXT_ATHLETES, athletes_kb)
-        elif payload == "ranks":
-            await show("🏅 **Присвоение спортивных разрядов и званий**\n\nВыберите подраздел:", ranks_kb)
-        elif payload == "ranks_who":
-            await show(TEXT_RANKS_WHO, back_to_ranks_kb)
-
-        # --- РАЗДЕЛ 4: ГТО ---
-        elif payload == "gto_menu":
-            await show(TEXT_GTO_MENU, gto_kb)
-        elif payload == "gto_how":
-            await show(TEXT_GTO_HOW, back_to_gto_kb)
-        elif payload == "gto_centers":
-            await show(TEXT_GTO_CENTERS, back_to_gto_kb)
-
-        # --- РАЗДЕЛ 5: НАЛОГОВЫЙ ВЫЧЕТ ---
-        elif payload == "tax_menu":
-            await show(TEXT_TAX_MENU, tax_kb)
-        elif payload == "tax_sport":
-            await show(TEXT_TAX_SPORT, tax_sport_kb)
-
-        # --- РАЗДЕЛ 8: ФЕДЕРАЦИЯМ ---
-        elif payload == "federations":
-            await show("🤝 **Федерациям, НКО и частным клубам**\n\nВыберите раздел:", federations_kb)
-
-        # --- РАЗДЕЛ 9: КОНТАКТЫ ---
-        elif payload == "contacts":
-            await show(TEXT_CONTACTS, back_to_menu_kb)
-
-        else:
-            log(f"UNHANDLED PAYLOAD: {payload}")
+            log("7. SEND_MESSAGE OK")
+        except Exception as e:
+            log(f"7. SEND_MESSAGE FAILED: {type(e).__name__}: {e}")
