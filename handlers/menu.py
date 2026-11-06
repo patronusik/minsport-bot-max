@@ -1,3 +1,5 @@
+import ssl
+import certifi
 import aiohttp
 from config import (
     MAX_BOT_TOKEN,
@@ -24,6 +26,7 @@ from handlers.start import is_user_subscribed
 
 
 def _kb_to_attachments(keyboard):
+    """Преобразует InlineKeyboardMarkup umaxbot в формат attachments MAX API."""
     if keyboard is None:
         return None
     buttons = []
@@ -40,6 +43,7 @@ def _kb_to_attachments(keyboard):
 
 
 async def _edit_message_http(message_id, text, keyboard):
+    """Редактирует сообщение напрямую через API MAX (токен в заголовке, SSL через certifi)."""
     url = f"https://platform-api2.max.ru/messages?message_id={message_id}"
     headers = {
         "Authorization": MAX_BOT_TOKEN,
@@ -49,12 +53,20 @@ async def _edit_message_http(message_id, text, keyboard):
     att = _kb_to_attachments(keyboard)
     if att:
         body["attachments"] = att
+
+    # Явный SSL-контекст с сертификатами certifi (в контейнере нет системных корней)
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+
     print(f"EDIT REQ: url={url}, body_keys={list(body.keys())}")
-    async with aiohttp.ClientSession() as session:
-        async with session.put(url, headers=headers, json=body) as resp:
-            txt = await resp.text()
-            print(f"EDIT RESP: status={resp.status}, body={txt[:300]}")
-            return resp.status == 200
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.put(url, headers=headers, json=body, ssl=ssl_context) as resp:
+                txt = await resp.text()
+                print(f"EDIT RESP: status={resp.status}, body={txt[:300]}")
+                return resp.status == 200
+    except Exception as e:
+        print(f"EDIT EXCEPTION: {e}")
+        return False
 
 
 def register(dp, bot):
@@ -63,16 +75,6 @@ def register(dp, bot):
     async def on_callback(cb):
         print("=" * 60)
         print("RAW CALLBACK RECEIVED")
-        print(f"CB TYPE: {type(cb)}")
-        print(f"CB ATTRS: {[a for a in dir(cb) if not a.startswith('_')]}")
-
-        # Пытаемся напечатать все поля
-        for attr in ["payload", "callback_id", "id", "message", "user", "data"]:
-            try:
-                val = getattr(cb, attr, "<NO ATTR>")
-                print(f"CB.{attr} = {val}")
-            except Exception as e:
-                print(f"CB.{attr} ERROR: {e}")
 
         # --- ANSWER_CALLBACK ---
         callback_id = getattr(cb, "callback_id", None)
