@@ -2,6 +2,7 @@ import ssl
 import aiohttp
 import logging
 import sys
+import os
 
 from config import (
     MAX_BOT_TOKEN,
@@ -26,7 +27,7 @@ from keyboards import (
 )
 from handlers.start import is_user_subscribed
 
-# --- НАСТРОЙКА ЛОГГЕРА ---
+# --- ЛОГГЕР ---
 logger = logging.getLogger("menu")
 logger.setLevel(logging.DEBUG)
 if not logger.handlers:
@@ -34,9 +35,51 @@ if not logger.handlers:
     handler.setFormatter(logging.Formatter("%(asctime)s [MENU] %(message)s"))
     logger.addHandler(handler)
 
+
 def log(msg):
     print(msg, flush=True)
     logger.info(msg)
+
+
+def check_ssl_paths():
+    """Проверяет, какие пути сертификатов использует Python."""
+    log("=" * 60)
+    log("SSL CERTIFICATE PATHS CHECK")
+
+    # 1. Переменные окружения
+    ssl_cert_file = os.environ.get("SSL_CERT_FILE", "<not set>")
+    requests_ca_bundle = os.environ.get("REQUESTS_CA_BUNDLE", "<not set>")
+    log(f"ENV SSL_CERT_FILE = {ssl_cert_file}")
+    log(f"ENV REQUESTS_CA_BUNDLE = {requests_ca_bundle}")
+
+    # 2. Пути по умолчанию из ssl модуля
+    try:
+        paths = ssl.get_default_verify_paths()
+        log(f"ssl.get_default_verify_paths().cafile = {paths.cafile}")
+        log(f"ssl.get_default_verify_paths().capath = {paths.capath}")
+        log(f"ssl.get_default_verify_paths().openssl_cafile_env = {paths.openssl_cafile_env}")
+    except Exception as e:
+        log(f"ssl.get_default_verify_paths() FAILED: {e}")
+
+    # 3. Проверка, существует ли системный файл
+    system_ca = "/etc/ssl/certs/ca-certificates.crt"
+    exists = os.path.exists(system_ca)
+    log(f"System CA file {system_ca} exists = {exists}")
+    if exists:
+        size = os.path.getsize(system_ca)
+        log(f"System CA file size = {size} bytes")
+
+    # 4. Проверка certifi
+    try:
+        import certifi
+        certifi_path = certifi.where()
+        log(f"certifi.where() = {certifi_path}")
+        certifi_exists = os.path.exists(certifi_path)
+        log(f"certifi bundle exists = {certifi_exists}")
+    except Exception as e:
+        log(f"certifi check FAILED: {e}")
+
+    log("=" * 60)
 
 
 def _kb_to_attachments(keyboard):
@@ -66,16 +109,21 @@ async def _edit_message_http(message_id, text, keyboard):
     if att:
         body["attachments"] = att
 
-    # Пробуем системный контекст (сертификаты Минцифры должны быть в Dockerfile)
+    # Пробуем создать SSL-контекст с системным файлом
+    system_ca = "/etc/ssl/certs/ca-certificates.crt"
+    ssl_context = None
     try:
-        ssl_context = ssl.create_default_context()
-        log("SSL context created (system default)")
+        if os.path.exists(system_ca):
+            ssl_context = ssl.create_default_context(cafile=system_ca)
+            log(f"SSL context created with cafile={system_ca}")
+        else:
+            ssl_context = ssl.create_default_context()
+            log("SSL context created with default paths (system file not found)")
     except Exception as e:
         log(f"SSL context creation FAILED: {e}")
         ssl_context = None
 
     log(f"EDIT REQ: url={url}")
-    log(f"EDIT REQ headers: {list(headers.keys())}")
     log(f"EDIT REQ body: {str(body)[:500]}")
 
     try:
@@ -90,6 +138,8 @@ async def _edit_message_http(message_id, text, keyboard):
 
 
 def register(dp, bot):
+    # При запуске проверяем пути сертификатов
+    check_ssl_paths()
 
     @dp.callback()
     async def on_callback(cb):
