@@ -1,4 +1,3 @@
-umaxbot
-python-dotenv
 aiohttp
 certifi
+python-dotenv
