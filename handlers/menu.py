@@ -24,25 +24,22 @@ from handlers.start import is_user_subscribed
 
 
 def _kb_to_attachments(keyboard):
-    """Преобразует InlineKeyboardMarkup umaxbot в формат attachments MAX API."""
     if keyboard is None:
         return None
-    # keyboard.inline_keyboard — это список списков кнопок
-    # В umaxbot кнопка имеет поля: text, url / callback_data
     buttons = []
     for row in keyboard.inline_keyboard:
         btn_row = []
         for btn in row:
-            b = {"type": "callback", "text": btn.text, "payload": btn.callback_data}
             if getattr(btn, "url", None):
                 b = {"type": "link", "text": btn.text, "url": btn.url}
+            else:
+                b = {"type": "callback", "text": btn.text, "payload": getattr(btn, "callback_data", "")}
             btn_row.append(b)
         buttons.append(btn_row)
     return [{"type": "inline_keyboard", "payload": {"buttons": buttons}}]
 
 
 async def _edit_message_http(message_id, text, keyboard):
-    """Редактирует сообщение напрямую через API MAX (токен в заголовке)."""
     url = f"https://platform-api2.max.ru/messages?message_id={message_id}"
     headers = {
         "Authorization": MAX_BOT_TOKEN,
@@ -52,35 +49,47 @@ async def _edit_message_http(message_id, text, keyboard):
     att = _kb_to_attachments(keyboard)
     if att:
         body["attachments"] = att
+    print(f"EDIT REQ: url={url}, body_keys={list(body.keys())}")
     async with aiohttp.ClientSession() as session:
         async with session.put(url, headers=headers, json=body) as resp:
-            if resp.status == 200:
-                print(f"EDITED via HTTP: {message_id}")
-                return True
-            else:
-                err = await resp.text()
-                print(f"EDIT HTTP FAILED: {resp.status} {err}")
-                return False
+            txt = await resp.text()
+            print(f"EDIT RESP: status={resp.status}, body={txt[:300]}")
+            return resp.status == 200
 
 
 def register(dp, bot):
 
     @dp.callback()
     async def on_callback(cb):
-        # --- ANSWER_CALLBACK (исправлено: callback_id, а не id) ---
+        print("=" * 60)
+        print("RAW CALLBACK RECEIVED")
+        print(f"CB TYPE: {type(cb)}")
+        print(f"CB ATTRS: {[a for a in dir(cb) if not a.startswith('_')]}")
+
+        # Пытаемся напечатать все поля
+        for attr in ["payload", "callback_id", "id", "message", "user", "data"]:
+            try:
+                val = getattr(cb, attr, "<NO ATTR>")
+                print(f"CB.{attr} = {val}")
+            except Exception as e:
+                print(f"CB.{attr} ERROR: {e}")
+
+        # --- ANSWER_CALLBACK ---
         callback_id = getattr(cb, "callback_id", None)
         if callback_id is None and hasattr(cb, "data") and isinstance(cb.data, dict):
             callback_id = cb.data.get("callback_id")
+        print(f"RESOLVED callback_id = {callback_id}")
+
         if callback_id:
             try:
                 await bot.answer_callback(callback_id=callback_id, notification="")
+                print("ANSWER_CALLBACK OK")
             except Exception as e:
                 print(f"ANSWER_CALLBACK FAILED: {e}")
         else:
             print("ANSWER_CALLBACK SKIPPED: callback_id not found")
 
-        print(f"CALLBACK: payload={cb.payload}")
-
+        # --- USER_ID ---
         user_id = None
         if hasattr(cb, "user") and cb.user is not None:
             user_id = getattr(cb.user, "id", None) or (
@@ -88,8 +97,9 @@ def register(dp, bot):
             )
         if user_id is None:
             user_id = getattr(cb, "user_id", None)
+        print(f"RESOLVED user_id = {user_id}")
 
-        # --- ID СООБЩЕНИЯ ---
+        # --- MESSAGE_ID ---
         message_id = None
         if hasattr(cb, "message") and cb.message is not None:
             m = cb.message
@@ -99,16 +109,21 @@ def register(dp, bot):
                 message_id = getattr(m, "mid", None) or getattr(m, "id", None)
         if message_id is None and hasattr(cb, "message_id"):
             message_id = cb.message_id
-
-        print(f"CALLBACK: user_id={user_id}, message_id={message_id}")
+        print(f"RESOLVED message_id = {message_id}")
 
         payload = cb.payload
+        print(f"PAYLOAD = {payload}")
+        print("=" * 60)
 
         async def show(text, keyboard):
+            print(f"SHOW CALLED: message_id={message_id}")
             if message_id:
                 ok = await _edit_message_http(message_id, text, keyboard)
                 if ok:
+                    print("SHOW: edit success")
                     return
+                print("SHOW: edit failed, fallback to send")
+            print("SHOW: sending new message")
             await bot.send_message(
                 user_id=user_id,
                 text=text,
@@ -119,6 +134,7 @@ def register(dp, bot):
         # --- ПОДПИСКА ---
         if payload == "check_sub":
             subscribed = await is_user_subscribed(user_id)
+            print(f"SUBSCRIBED = {subscribed}")
             if subscribed:
                 await show(TEXT_WELCOME, main_menu_kb)
             else:
@@ -134,6 +150,7 @@ def register(dp, bot):
             return
 
         subscribed = await is_user_subscribed(user_id)
+        print(f"SUBSCRIBED = {subscribed}")
         if not subscribed:
             await bot.send_message(
                 user_id=user_id,
