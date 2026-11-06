@@ -1,3 +1,12 @@
+import sys
+import logging
+
+# Принудительно направляем логи в stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 from config import (
     TEXT_WELCOME, TEXT_NOT_SUBSCRIBED,
     TEXT_INSTITUTIONS, TEXT_CALENDAR,
