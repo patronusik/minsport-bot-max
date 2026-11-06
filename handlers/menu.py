@@ -1,5 +1,4 @@
 import ssl
-import certifi
 import aiohttp
 import logging
 import sys
@@ -27,7 +26,7 @@ from keyboards import (
 )
 from handlers.start import is_user_subscribed
 
-# --- ЛОГГЕР, КОТОРЫЙ ПИШЕТ И В PRINT, И В LOGGING ---
+# --- ЛОГГЕР ---
 logger = logging.getLogger("menu")
 logger.setLevel(logging.INFO)
 if not logger.handlers:
@@ -35,9 +34,10 @@ if not logger.handlers:
     handler.setFormatter(logging.Formatter("%(asctime)s [MENU] %(message)s"))
     logger.addHandler(handler)
 
+
 def log(msg):
-    print(msg, flush=True)          # для runtime-логов в панели
-    logger.info(msg)                 # для файловых логов и journald
+    print(msg, flush=True)
+    logger.info(msg)
 
 
 def _kb_to_attachments(keyboard):
@@ -67,7 +67,8 @@ async def _edit_message_http(message_id, text, keyboard):
     if att:
         body["attachments"] = att
 
-    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    # Используем системное хранилище сертификатов (Dockerfile добавит туда сертификаты Минцифры)
+    ssl_context = ssl.create_default_context()
 
     log(f"EDIT REQ: url={url}, body_keys={list(body.keys())}")
     try:
@@ -88,6 +89,7 @@ def register(dp, bot):
         log("=" * 60)
         log("RAW CALLBACK RECEIVED")
 
+        # --- ANSWER_CALLBACK ---
         callback_id = getattr(cb, "callback_id", None)
         if callback_id is None and hasattr(cb, "data") and isinstance(cb.data, dict):
             callback_id = cb.data.get("callback_id")
@@ -102,6 +104,7 @@ def register(dp, bot):
         else:
             log("ANSWER_CALLBACK SKIPPED: callback_id not found")
 
+        # --- USER_ID ---
         user_id = None
         if hasattr(cb, "user") and cb.user is not None:
             user_id = getattr(cb.user, "id", None) or (
@@ -111,6 +114,7 @@ def register(dp, bot):
             user_id = getattr(cb, "user_id", None)
         log(f"RESOLVED user_id = {user_id}")
 
+        # --- MESSAGE_ID ---
         message_id = None
         if hasattr(cb, "message") and cb.message is not None:
             m = cb.message
@@ -142,6 +146,7 @@ def register(dp, bot):
                 format="markdown"
             )
 
+        # --- ПОДПИСКА ---
         if payload == "check_sub":
             subscribed = await is_user_subscribed(user_id)
             log(f"SUBSCRIBED = {subscribed}")
@@ -169,6 +174,7 @@ def register(dp, bot):
             )
             return
 
+        # --- РАЗДЕЛ 1: УЧРЕЖДЕНИЯ ---
         if payload == "institutions":
             await show(TEXT_INSTITUTIONS, institutions_kb)
         elif payload == "inst_kaspiy":
@@ -182,6 +188,7 @@ def register(dp, bot):
         elif payload == "inst_winter":
             await show("🏛 ГАУ АО «Центр зимних видов спорта»\n\nВыберите подраздел:", inst_winter_kb)
 
+        # --- РАЗДЕЛ 2: КАЛЕНДАРЬ ---
         elif payload == "calendar":
             await show(TEXT_CALENDAR, calendar_kb)
         elif payload == "cal_astrakhanochka":
@@ -195,6 +202,7 @@ def register(dp, bot):
         elif payload == "cal_astrakhan":
             await show(TEXT_CAL_ASTRAKHAN, back_to_calendar_kb)
 
+        # --- РАЗДЕЛ 3: СПОРТСМЕНАМ ---
         elif payload == "athletes":
             await show(TEXT_ATHLETES, athletes_kb)
         elif payload == "ranks":
@@ -202,6 +210,7 @@ def register(dp, bot):
         elif payload == "ranks_who":
             await show(TEXT_RANKS_WHO, back_to_ranks_kb)
 
+        # --- РАЗДЕЛ 4: ГТО ---
         elif payload == "gto_menu":
             await show(TEXT_GTO_MENU, gto_kb)
         elif payload == "gto_how":
@@ -209,14 +218,17 @@ def register(dp, bot):
         elif payload == "gto_centers":
             await show(TEXT_GTO_CENTERS, back_to_gto_kb)
 
+        # --- РАЗДЕЛ 5: НАЛОГОВЫЙ ВЫЧЕТ ---
         elif payload == "tax_menu":
             await show(TEXT_TAX_MENU, tax_kb)
         elif payload == "tax_sport":
             await show(TEXT_TAX_SPORT, tax_sport_kb)
 
+        # --- РАЗДЕЛ 8: ФЕДЕРАЦИЯМ ---
         elif payload == "federations":
             await show("🤝 **Федерациям, НКО и частным клубам**\n\nВыберите раздел:", federations_kb)
 
+        # --- РАЗДЕЛ 9: КОНТАКТЫ ---
         elif payload == "contacts":
             await show(TEXT_CONTACTS, back_to_menu_kb)
 
