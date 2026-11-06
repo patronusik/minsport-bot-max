@@ -1,13 +1,6 @@
-import sys
-import logging
-
-# Принудительно направляем логи в stdout
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
+import aiohttp
 from config import (
+    MAX_BOT_TOKEN,
     TEXT_WELCOME, TEXT_NOT_SUBSCRIBED,
     TEXT_INSTITUTIONS, TEXT_CALENDAR,
     TEXT_CAL_ASTRAKHANOCHKA, TEXT_CAL_VOLGAR, TEXT_CAL_DINAMO,
@@ -30,15 +23,61 @@ from keyboards import (
 from handlers.start import is_user_subscribed
 
 
+def _kb_to_attachments(keyboard):
+    """Преобразует InlineKeyboardMarkup umaxbot в формат attachments MAX API."""
+    if keyboard is None:
+        return None
+    # keyboard.inline_keyboard — это список списков кнопок
+    # В umaxbot кнопка имеет поля: text, url / callback_data
+    buttons = []
+    for row in keyboard.inline_keyboard:
+        btn_row = []
+        for btn in row:
+            b = {"type": "callback", "text": btn.text, "payload": btn.callback_data}
+            if getattr(btn, "url", None):
+                b = {"type": "link", "text": btn.text, "url": btn.url}
+            btn_row.append(b)
+        buttons.append(btn_row)
+    return [{"type": "inline_keyboard", "payload": {"buttons": buttons}}]
+
+
+async def _edit_message_http(message_id, text, keyboard):
+    """Редактирует сообщение напрямую через API MAX (токен в заголовке)."""
+    url = f"https://platform-api2.max.ru/messages?message_id={message_id}"
+    headers = {
+        "Authorization": MAX_BOT_TOKEN,
+        "Content-Type": "application/json"
+    }
+    body = {"text": text, "format": "markdown"}
+    att = _kb_to_attachments(keyboard)
+    if att:
+        body["attachments"] = att
+    async with aiohttp.ClientSession() as session:
+        async with session.put(url, headers=headers, json=body) as resp:
+            if resp.status == 200:
+                print(f"EDITED via HTTP: {message_id}")
+                return True
+            else:
+                err = await resp.text()
+                print(f"EDIT HTTP FAILED: {resp.status} {err}")
+                return False
+
+
 def register(dp, bot):
 
     @dp.callback()
     async def on_callback(cb):
-        # --- СНАЧАЛА ОТВЕЧАЕМ НА CALLBACK (обязательно для MAX) ---
-        try:
-            await bot.answer_callback(callback_id=cb.id, notification="")
-        except Exception as e:
-            print(f"ANSWER_CALLBACK FAILED: {e}")
+        # --- ANSWER_CALLBACK (исправлено: callback_id, а не id) ---
+        callback_id = getattr(cb, "callback_id", None)
+        if callback_id is None and hasattr(cb, "data") and isinstance(cb.data, dict):
+            callback_id = cb.data.get("callback_id")
+        if callback_id:
+            try:
+                await bot.answer_callback(callback_id=callback_id, notification="")
+            except Exception as e:
+                print(f"ANSWER_CALLBACK FAILED: {e}")
+        else:
+            print("ANSWER_CALLBACK SKIPPED: callback_id not found")
 
         print(f"CALLBACK: payload={cb.payload}")
 
@@ -50,39 +89,26 @@ def register(dp, bot):
         if user_id is None:
             user_id = getattr(cb, "user_id", None)
 
-        # --- БЕЗОПАСНОЕ ИЗВЛЕЧЕНИЕ ID СООБЩЕНИЯ ---
+        # --- ID СООБЩЕНИЯ ---
         message_id = None
-        try:
-            if hasattr(cb, "message") and cb.message is not None:
-                m = cb.message
-                if isinstance(m, dict):
-                    message_id = m.get("mid") or m.get("id")
-                else:
-                    message_id = getattr(m, "mid", None) or getattr(m, "id", None)
-            if message_id is None and hasattr(cb, "message_id"):
-                message_id = cb.message_id
-        except Exception as e:
-            print(f"MESSAGE_ID EXTRACT FAILED: {e}")
-            message_id = None
+        if hasattr(cb, "message") and cb.message is not None:
+            m = cb.message
+            if isinstance(m, dict):
+                message_id = m.get("mid") or m.get("id")
+            else:
+                message_id = getattr(m, "mid", None) or getattr(m, "id", None)
+        if message_id is None and hasattr(cb, "message_id"):
+            message_id = cb.message_id
 
         print(f"CALLBACK: user_id={user_id}, message_id={message_id}")
 
         payload = cb.payload
 
-        # --- ХЕЛПЕР: отредактировать или отправить ---
         async def show(text, keyboard):
             if message_id:
-                try:
-                    await bot.update_message(
-                        message_id=message_id,
-                        text=text,
-                        reply_markup=keyboard,
-                        format="markdown"
-                    )
-                    print(f"EDITED message_id={message_id}")
+                ok = await _edit_message_http(message_id, text, keyboard)
+                if ok:
                     return
-                except Exception as e:
-                    print(f"UPDATE FAILED: {e}. Fallback to send_message")
             await bot.send_message(
                 user_id=user_id,
                 text=text,
