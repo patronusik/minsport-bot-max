@@ -1,8 +1,8 @@
 import os
 
 # Указываем Python использовать системные сертификаты (Минцифры уже добавлены в Dockerfile)
-os.environ['SSL_CERT_FILE'] = '/etc/ssl/certs/ca-certificates.crt'
-os.environ['REQUESTS_CA_BUNDLE'] = '/etc/ssl/certs/ca-certificates.crt'
+os.environ['SSL_CERT_FILE'] = '/app/russian_trusted_root_ca.cer'
+os.environ['REQUESTS_CA_BUNDLE'] = '/app/russian_trusted_root_ca.cer'
 
 import asyncio
 from handlers import start, menu
